@@ -30,16 +30,17 @@ def get_input_args():
 
 
 def main():
-    trainingdir = "./flowers/train"
 
     # Get CLI arguments
     args = get_input_args()
-
+    
     # Prep data
-    transform = utilities.transform_data('train')
-    trainloader = utilities.load_data(args.data_directory, transform)
-    validationloader = utilities.load_data(trainingdir, transform)
-    testloader = utilities.load_data(trainingdir, transform)
+    train_transform = utilities.transform_data('train')
+    test_transform = utilities.transform_data('test')
+    # Dataloaders
+    trainloader = utilities.load_data(args.data_directory + '/' + 'train', train_transform)
+    validationloader = utilities.load_data(args.data_directory + '/' + 'valid', test_transform)
+
     # Setup and train model
     model, optimizer, criterion = functions.model_setup(args.arch, args.hidden_units, args.learning_rate)
     trained_model = functions.train_model(optimizer, criterion, model, trainloader, validationloader, args.gpu, args.epochs)
