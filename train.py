@@ -33,10 +33,11 @@ def main():
 
     # Get CLI arguments
     args = get_input_args()
-    
+
     # Prep data
     train_transform = utilities.transform_data('train')
     test_transform = utilities.transform_data('test')
+
     # Dataloaders
     trainloader = utilities.load_data(args.data_directory + '/' + 'train', train_transform)
     validationloader = utilities.load_data(args.data_directory + '/' + 'valid', test_transform)
