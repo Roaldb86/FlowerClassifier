@@ -25,10 +25,10 @@ def main():
     model = functions.load_checkpoint(args.checkpoint)
     # Get probabilities, labels and flower name from prediction function
     top_probs, top_labels,  top_flowers = functions.predict(args.image_path, model, args.category_name, args.gpu, args.top_k)
-    # Print result 
+    # Print result
     for i in zip(top_probs, top_labels, top_flowers):
         print(i)
-   
-    
+
+
 if __name__ == "__main__":
     main()

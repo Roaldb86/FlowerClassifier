@@ -11,15 +11,17 @@ import torch.nn.functional as F
 from torchvision import datasets, transforms, models
 import seaborn as sns
 import json
+import utilities
 
+# Import means and std from utilities ( to ease maintanance of these variables)
+means = utilities.means
+std = utilities.std
 
-
-def model_setup(structure='vgg19', hidden_layer1 = 512,lr = 0.001):
+def model_setup(structure='vgg19', hidden_layer1=512, lr=0.001):
     """
     Input parameters:
     ------------------------------------------------------------
     Structure:     'vgg19' (default), 'densenet121' or 'alexnet'
-    Dropout:       default is 0.5
     learning_rate: default is 0.001
     ------------------------------------------------------------
     Returns model, optimizer and criterion
@@ -62,7 +64,7 @@ def model_setup(structure='vgg19', hidden_layer1 = 512,lr = 0.001):
         model.classifier = classifier
         criterion = nn.NLLLoss()
         optimizer = optim.Adam(model.classifier.parameters(), lr )
-        model.cuda()
+
 
         return model , optimizer ,criterion
 
@@ -91,7 +93,7 @@ def check_perfomance(loader, model, criterion, device, optimizer):
 
     return test_loss, accuracy
 
-def train_model(optimizer, criterion, model, trainloader, validationloader, epochs=5):
+def train_model(optimizer, criterion, model, trainloader, validationloader, gpu, epochs):
     """
     Training a pytorch model. Takes optimizer, criterion, model and epochs(default=5)
     as input. Returns a trained model
@@ -99,7 +101,7 @@ def train_model(optimizer, criterion, model, trainloader, validationloader, epoc
 
     # Set Device to cuda if availble else cpu
     # And initiate some internal variabels
-    device = torch.device("cuda:0" if torch.cuda.is_available else 'cpu')
+    device = torch.device("cuda:0" if torch.cuda.is_available and gpu else 'cpu')
     model.to(device)
     print_every = 5
     steps = 0
@@ -149,6 +151,8 @@ def train_model(optimizer, criterion, model, trainloader, validationloader, epoc
 def process_image(image_path):
     """Takes image path as input and returns a processed image"""
 
+    # Call global means and std variables
+    global means, std
     # Open image with PIL
     image = Image.open(image_path)
 
@@ -167,9 +171,7 @@ def process_image(image_path):
                       top_margin))
     # Normalize
     image = np.array(image)/255
-    mean = np.array([0.485, 0.456, 0.406])
-    std = np.array([0.229, 0.224, 0.225])
-    image = (image - mean)/std
+    image = (image - means)/std
 
     # Move color channels to first dimension as expected by PyTorch
     image = image.transpose((2, 0, 1))
@@ -196,7 +198,7 @@ def save_checkpoint(model, save_dir):
 
 def load_checkpoint(filepath):
     """ Loads checkpoint of model. Takes filepath as input and returns loaded model."""
-    
+
     checkpoint = torch.load(filepath)
     arch = checkpoint['arch']
     hidden_units = checkpoint['hidden_units']
@@ -209,20 +211,17 @@ def load_checkpoint(filepath):
 
 def predict(image_path, model, cat_to_name, gpu, k=5 ):
     """
-    Prediction function. Takes, images_path, model, category_label, gpu(True/False), k=number 
+    Prediction function. Takes, images_path, model, category_label, gpu(True/False), k=number
     of probable flowers as input. Returns a list of flowername, flowerlabels, and probabilities
     """
     # Process image
     with open(cat_to_name, 'r') as f:
         cat_to_name = json.load(f)
-    
-    if gpu == True:
-        device = 'cuda:0'
-    else:
-        device = 'cpu'
+
+
+    device = torch.device("cuda:0" if torch.cuda.is_available and gpu else 'cpu')
     model.to(device)
-    
-               
+
     img = process_image(image_path)
 
     # transform numpy to tensor object
@@ -242,10 +241,12 @@ def predict(image_path, model, cat_to_name, gpu, k=5 ):
     # Convert indices to classes
     idx_to_class = {val: key for key, val in
                                       model.class_to_idx.items()}
-    top_labels = [idx_to_class[lab] for lab in top_labs]
+
+    # Get top labels and top frloer names
+    top_labels = []
     top_flowers = []
-    top_flowers = [cat_to_name[idx_to_class[lab]] for lab in top_labs]
+    for label in top_labs:
+        top_labels.append(idx_to_class[label])
+        top_flowers.append(cat_to_name[idx_to_class[label]])
 
     return top_probs, top_labels, top_flowers
-
-

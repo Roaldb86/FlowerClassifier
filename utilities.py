@@ -12,9 +12,9 @@ from torchvision import datasets, transforms, models
 import seaborn as sns
 import json
 
-#
-
-
+# Define means and std as global variables for easy maintanance
+means = [0.485, 0.456, 0.406]
+std =  [0.229, 0.224, 0.225]
 
 def transform_data(scenario, resize=224 , crop=224, rotation=30):
     """
@@ -31,9 +31,8 @@ def transform_data(scenario, resize=224 , crop=224, rotation=30):
     returns transform object
     -------------------------------------
     """
-    means = [0.485, 0.456, 0.406]
-    std =  [0.229, 0.224, 0.225]
-    
+    global means, std
+
     if scenario == 'train':
         transform = transforms.Compose([transforms.RandomRotation(rotation),
                                         transforms.RandomResizedCrop(resize),
@@ -64,12 +63,14 @@ def load_data(dir, transformer, batch_size=32, shuffle=True):
     ---------------------------------------------------------------------
     returns dataloader
     """
-    
+
     data = datasets.ImageFolder(dir, transform=transformer)
     return torch.utils.data.DataLoader(data, batch_size, shuffle)
 
 def process_image(image_path):
-
+    """Function for image processing, takes imagepath as input, returns processed image """
+    # Call global varibales
+    global means, std
     # Open image with PIL
     image = Image.open(image_path)
 
@@ -88,9 +89,7 @@ def process_image(image_path):
                       top_margin))
     # Normalize
     image = np.array(image)/255
-    mean = np.array([0.485, 0.456, 0.406])
-    std = np.array([0.229, 0.224, 0.225])
-    image = (image - mean)/std
+    image = (image - means)/std
 
     # Move color channels to first dimension as expected by PyTorch
     image = image.transpose((2, 0, 1))
@@ -98,6 +97,11 @@ def process_image(image_path):
     return image
 
 def imshow(image, ax=None, title=None):
+    """ Show image in matplotlib, takes image and optional axis and title arguments"""
+
+    # Global variables
+    global means, std
+
     if ax is None:
         fig, ax = plt.subplots()
 
@@ -110,9 +114,7 @@ def imshow(image, ax=None, title=None):
         plt.title(title)
 
     # Undo preprocessing
-    mean = np.array([0.485, 0.456, 0.406])
-    std = np.array([0.229, 0.224, 0.225])
-    image = std * image + mean
+    image = std * image + means
 
     # Image needs to be clipped between 0 and 1 or it looks like noise when displayed
     image = np.clip(image, 0, 1)
@@ -120,5 +122,3 @@ def imshow(image, ax=None, title=None):
     ax.imshow(image)
 
     return ax
-
-
